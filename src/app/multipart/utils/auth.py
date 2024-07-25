@@ -1,55 +1,38 @@
-from fastapi import HTTPException, status
-
-from datetime import datetime, timedelta, timezone
 import hashlib
+from datetime import datetime, timedelta, timezone
 import jwt
 
 import sys
 sys.path.append('src')
 
 from app.env import ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY, ALGORITHM, PASS_SALT
-
-
-def get_password_hash(password: str) -> str:
-    pwd = password + PASS_SALT
-    return hashlib.md5(pwd.encode()).hexdigest()
+from app.multipart.schemas.token import TokenDataScheme, TokenScheme
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    pwd = plain_password + PASS_SALT
-    if hashlib.md5(pwd.encode()).hexdigest() == hashed_password:
-        return True
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail='Could not validate credentials',
-        headers={"WWW-Authenticate": "JWT"}
-    )
+    db_pass = plain_password + PASS_SALT
+    hashed = hashlib.md5(db_pass.encode())
+    return hashed.hexdigest() == hashed_password
 
 
-def create_access_token(id_user: int) -> str:
-    exp = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    return jwt.encode(
-        payload={
-            'sub': id_user,
-            'exp': exp
-        },
-        key=SECRET_KEY,
-        algorithm=ALGORITHM,
-    )
+def get_password_hash(password: str) -> str:
+    db_pass = password + PASS_SALT
+    hashed = hashlib.md5(db_pass.encode())
+    return hashed.hexdigest()
 
 
-def decode_acces_token(token: str) -> dict[str, int]:
+def create_access_token(data: TokenDataScheme) -> TokenScheme:
+    to_encode = data.id_user
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    return TokenScheme(token=jwt.encode(payload={
+        'sub': to_encode,
+        'exp': expire
+    }, key=SECRET_KEY, algorithm=ALGORITHM))
+
+
+def decode_acces_token(token: TokenScheme) -> TokenDataScheme | None:
     try:
-        payload = jwt.decode(
-        jwt=token,
-        key=SECRET_KEY,
-        algorithms=[ALGORITHM]
-    )
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail='invalid token',
-        headers={"WWW-Authenticate": "JWT"}
-    )
-    else:
-        return payload
+        payload = jwt.decode(jwt=token.token, key=SECRET_KEY, algorithms=[ALGORITHM])
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+        return None
+    return TokenDataScheme(id_user=payload['sub'])

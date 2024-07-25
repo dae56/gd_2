@@ -1,4 +1,3 @@
-from typing import Any
 from pydantic import BaseModel, EmailStr, Field
 
 
@@ -17,3 +16,5 @@ class UserScheme(BaseModel):
     email: EmailStr
     hashed_password: str
     token: str | None
+    disabled: bool
+    
