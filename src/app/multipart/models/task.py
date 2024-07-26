@@ -7,7 +7,7 @@ sys.path.append('src')
 from app.multipart.models.base import Base
 
 
-class Task(Base):
+class Task(Base):  # Модель таблицы задач
     __tablename__ = 'tasks'
 
     id: Mapped[int] = mapped_column(primary_key=True)

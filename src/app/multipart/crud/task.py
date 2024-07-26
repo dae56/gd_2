@@ -13,6 +13,7 @@ from app.multipart.models.task import Task
 
 
 async def create_task(session: AsyncSession, new_task: CreateTaskScheme, token: TokenScheme) -> bool | None:
+    '''Создание записи.'''
     user = await get_current_active_user(session=session, token=token)
     if user:
         task = Task(
@@ -26,6 +27,7 @@ async def create_task(session: AsyncSession, new_task: CreateTaskScheme, token: 
 
 
 async def get_tasks(session: AsyncSession, token: TokenScheme, offset: int, count: int) -> list[TaskScheme] | None:
+    '''Получение списка записей пользователя с пагинацией.'''
     user = await get_current_active_user(session=session, token=token)
     if user:
         res = await session.execute(select(Task).where(Task.user == user).limit(count).offset(offset))
@@ -42,6 +44,7 @@ async def get_tasks(session: AsyncSession, token: TokenScheme, offset: int, coun
         
 
 async def get_task(session: AsyncSession, token: TokenScheme, task_id: int) -> TaskScheme | None:
+    '''Получение конкретной записи по её ID.'''
     user = await get_current_active_user(session=session, token=token)
     if user:
         res = await session.execute(select(Task).where(and_(Task.user == user, Task.id == task_id)))
@@ -56,17 +59,18 @@ async def get_task(session: AsyncSession, token: TokenScheme, task_id: int) -> T
         
 
 async def update_task(session: AsyncSession, token: TokenScheme, task_id: int, new_task_data: CreateTaskScheme) -> TaskScheme | None:
+    '''Обновление записи (текста и имени записи) по её ID.'''
     user = await get_current_active_user(session=session, token=token)
     if user:
         await session.execute(update(Task).where(and_(Task.user == user, Task.id == task_id)).values(
-            name=new_task_data.name, text=new_task_data.text))
+            name=new_task_data.name, text=new_task_data.text))  # Добавляем новые данные по записи
         try:
             await session.commit()
         except IntegrityError:
             await session.rollback()
         else:
             res = await session.execute(select(Task).where(and_(Task.user == user, Task.id == task_id)))
-            task = res.scalar()
+            task = res.scalar()  # В случае успеха отдаем пользователю новую запись
             if task:
                 return TaskScheme(
                     id=task.id,
@@ -77,13 +81,14 @@ async def update_task(session: AsyncSession, token: TokenScheme, task_id: int, n
             
 
 async def del_task(session: AsyncSession, token: TokenScheme, task_id: int) -> bool | None:
+    '''Удаление записи по её ID.'''
     user = await get_current_active_user(session=session, token=token)
     if user:
         res = await session.execute(select(Task).where(and_(Task.user == user, Task.id == task_id)))
-        task = res.scalar()
+        task = res.scalar()  # Проверяем есть ли у него такая запись
         if task:
-            await session.execute(delete(Task).where(and_(Task.user == user, Task.id == task_id)))
-            await session.commit()
+            await session.execute(delete(Task).where(and_(Task.user == user, Task.id == task_id))) 
+            await session.commit()  # Удаляем её
             return True
         return False
     

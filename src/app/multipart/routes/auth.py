@@ -20,6 +20,7 @@ router = APIRouter(
 
 @router.post('/register')
 async def register(user_data: UserRegistryScheme, session: AsyncSession = Depends(get_async_session)) -> dict[str, str]:
+    '''Регистрация новых пользователей.'''
     await create_new_user(user_data=user_data, session=session)
     try:
         await session.commit()
@@ -34,7 +35,8 @@ async def register(user_data: UserRegistryScheme, session: AsyncSession = Depend
 
 @router.post('/login')
 async def login(responce: Response, request: Request, user_data: UserLoginScheme, session: AsyncSession = Depends(get_async_session)) -> dict[str, str]:
-    if request.cookies.get('auth'):
+    '''Логинирование пользователей.'''
+    if request.cookies.get('auth'):  # Если куки для токена есть то не пускаем дальше
         return {'message': 'The user is already authenticated!'}
     token = await login_user(user_data=user_data, session=session)
     if not token:
@@ -44,7 +46,7 @@ async def login(responce: Response, request: Request, user_data: UserLoginScheme
             detail='User does not exist!'
         )
     await session.commit()
-    responce.set_cookie(
+    responce.set_cookie(  # Устанавливаем токен в куки
         key='auth',
         value=token.token,
         max_age=COCKIE_MAX_AGE,
@@ -56,6 +58,7 @@ async def login(responce: Response, request: Request, user_data: UserLoginScheme
 
 @router.post('/logout')
 async def logout(responce: Response, request: Request, session: AsyncSession = Depends(get_async_session)) -> dict[str, str]:
+    '''Разлогинивание пользователей.'''
     token = request.cookies.get('auth')
     if token:
         responce.delete_cookie(key='auth')

@@ -19,4 +19,4 @@ async def async_main() -> None:
         await conn.run_sync(Task.metadata.create_all)
 
 
-asyncio.run(async_main())
+asyncio.run(async_main())  # Очистка и добавление таблиц в Postgres

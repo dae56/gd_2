@@ -24,6 +24,7 @@ unauth_exc = HTTPException(
 
 @router.post('/')
 async def create_new_task(responce: Request, new_task: CreateTaskScheme, session: AsyncSession = Depends(get_async_session)):
+    '''Создание новой записи.'''
     token = responce.cookies.get('auth')
     if token:
         res = await create_task(session=session, new_task=new_task, token=TokenScheme(token=token))
@@ -38,6 +39,7 @@ async def get_all_tasks(
     offset: int = Query(default=0, ge=0),
     count: int = Query(default=1, ge=0, le=100),
     session: AsyncSession = Depends(get_async_session)):
+    '''Получение всех записей (применена пагинация).'''
     token = responce.cookies.get('auth')
     if token:
         tasks = await get_tasks(session=session, token=TokenScheme(token=token), offset=offset, count=count)
@@ -49,6 +51,7 @@ async def get_all_tasks(
 
 @router.get('/{task_id}')
 async def get_cur_task(responce: Request, task_id: int, session: AsyncSession = Depends(get_async_session)):
+    '''Получение конкретной задачи.'''
     token = responce.cookies.get('auth')
     if token:
         task = await get_task(session=session, token=TokenScheme(token=token), task_id=task_id)
@@ -59,7 +62,12 @@ async def get_cur_task(responce: Request, task_id: int, session: AsyncSession = 
 
 
 @router.put('/{task_id}')
-async def update_cur_task(responce: Request, task_id: int, task_data: CreateTaskScheme, session: AsyncSession = Depends(get_async_session)):
+async def update_cur_task(
+    responce: Request,
+    task_id: int,
+    task_data: CreateTaskScheme,
+    session: AsyncSession = Depends(get_async_session)):
+    '''Обновление конкретной записи.'''
     token = responce.cookies.get('auth')
     if token:
         task = await update_task(session=session, token=TokenScheme(token=token), task_id=task_id, new_task_data=task_data)
@@ -73,6 +81,7 @@ async def update_cur_task(responce: Request, task_id: int, task_data: CreateTask
 
 @router.delete('/{task_id}')
 async def delete_cur_task(responce: Request, task_id: int, session: AsyncSession = Depends(get_async_session)):
+    '''Удаление конкретной записи.'''
     token = responce.cookies.get('auth')
     if token:
         res = await del_task(session=session, token=TokenScheme(token=token), task_id=task_id)

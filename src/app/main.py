@@ -21,10 +21,12 @@ app = FastAPI(
     version='0.0.1'
 )
 
+  # Подключение ограничений по количеству запросов
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
+  # Добавление роутов
 app.include_router(auth_router)
 app.include_router(task_router)
 

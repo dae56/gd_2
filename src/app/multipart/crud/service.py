@@ -10,31 +10,33 @@ from app.multipart.schemas.token import TokenScheme
 from app.multipart.schemas.user import UserLoginScheme
 from app.multipart.models.user import User
 from app.multipart.utils.auth import verify_password, decode_acces_token
-
-
-async def get_user(session: AsyncSession, id_user: int) -> User | None:
-    result = await session.execute(select(User).where(User.id == id_user))
-    user = result.scalar()
-    if user:
-        return user
+from app.multipart.connection.cache import cache_redis
 
 
 async def authenticate_user(session: AsyncSession, user_login_form: UserLoginScheme) -> User | None:
-    result = await session.execute(select(User).where(User.email == user_login_form.email))
+    '''Аутентификация пользоваетля.'''
+    result = await session.execute(select(User).where(User.email == user_login_form.email))  # Сверяем по логину
     user = result.scalar()
     if user:
-       if verify_password(user_login_form.password, user.hashed_password):
+       if verify_password(user_login_form.password, user.hashed_password):  # Проверяем пароль
            return user
 
 
 async def get_current_user(session: AsyncSession, token: TokenScheme) -> User | None:
-    result = await session.execute(select(User).where(User.token == token.token))
-    user = result.scalar()
+    '''Получение текущего пользователя по токену'''
     token_data = decode_acces_token(token=token)
-    if token_data and user:
-        user_id = token_data.id_user
-        if user_id == user.id:
-            return user
+    user_token: str | None = await cache_redis.get(str(token_data.id_user))  # Проверяем есть ли токен в кэше
+    if user_token:
+        if user_token == token.token:  # Сверяем его ли токен
+            result = await session.execute(select(User).where(User.id == token_data.id_user)) 
+            return result.scalar()  # В случае учпеха отдаем пользователя
+    else:
+        result = await session.execute(select(User).where(User.token == token.token))  # Иначе ищем токен в БД
+        user = result.scalar()
+        if token_data and user:
+            user_id = token_data.id_user  # Сверяем его ли токен
+            if user_id == user.id:
+                return user
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -42,6 +44,7 @@ async def get_current_user(session: AsyncSession, token: TokenScheme) -> User | 
 
 
 async def get_current_active_user(session: AsyncSession, token: TokenScheme) -> User | None:
+    '''Получение текущего пользователя (с проверкой на бан)'''
     user = await get_current_user(session=session, token=token)
     if user:
         if user.disabled:

@@ -7,7 +7,7 @@ sys.path.append('src')
 from app.multipart.models.base import Base
 
 
-class User(Base):
+class User(Base):  # Модель таблицы пользователя
     __tablename__ = 'users'
 
     id: Mapped[int] = mapped_column(primary_key=True)

@@ -13,7 +13,7 @@ class UserRegistryScheme(UserLoginScheme):
 class UserScheme(BaseModel):
     id: int
     name: str = Field(max_length=50)
-    email: EmailStr
+    email: EmailStr = Field(max_length=50)
     hashed_password: str
     token: str | None
     disabled: bool
